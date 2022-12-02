@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="yellocp2">#F3C301</color>
+    <color name="light_yellowcp2">#FEE3A2</color>
+    <color name="sky_bluecp2">#ADCACB</color>
+    <color name="Greencp2">#87C159</color>
+    <color name="dark_greencp2">#058240</color>
+    <color name="blackcp2">#FF000000</color>
+    <color name="whitecp2">#FFFFFFFF</color>
+
+    <color name="colorPrimaryDark">#FEE3A2</color>
+    <color name="colorAccent">#DED3A6</color>
+    <color name="colorPrimary">#759242</color>
+    <color name="colorPrimary2">#374709</color>
+    <color name="primary_text_color">#212121</color>
+    <color name="secondary_text_color">#9AA2AF</color>
+    <color name="white_color">#FFFFFF</color>
+    <color name="button_background_color">#374709</color>
+</resources>
