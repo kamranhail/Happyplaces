@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    tools:context="MainActivity">
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fabAddHappyPlace"
@@ -14,18 +14,7 @@
         android:layout_margin="@dimen/fab_margin"
         app:srcCompat="@drawable/ic_action_add_24" />
 
-    <Button
-        android:id="@+id/btn"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:text="button"
-        android:layout_marginTop="50dp"/>
-    <Button
-        android:id="@+id/btn"
-        android:layout_width="match_parent"
-        android:layout_height="50dp"
-        android:text="button"
-        android:layout_marginTop="50dp"/>
+
 
 
 </FrameLayout>
