@@ -19,9 +19,14 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import com.example.happyplaces.R
+import com.example.happyplaces.activities.AddHapyPlacesActivity.Companion.PLACE_AUTOCOMPLETE_REQUEST_CODE
 import com.example.happyplaces.database.DatabaseHelper
 import com.example.happyplaces.databinding.ActivityAddHapyPlacesBinding
 import com.example.happyplaces.modals.HapyPlaceModal
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.widget.Autocomplete
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import com.karumi.dexter.Dexter
 import com.karumi.dexter.MultiplePermissionsReport
 import com.karumi.dexter.PermissionToken
@@ -61,6 +66,12 @@ class AddHapyPlacesActivity : AppCompatActivity(), View.OnClickListener
             onBackPressed()
 
         }
+
+        if(Places.isInitialized())
+        {
+            Places.initialize(this@AddHapyPlacesActivity,
+                resources.getString(R.string.google_mas_api_key))
+        }
 if (intent.hasExtra(MainActivity.EXTRA_PLACE_DETAILS))
 {
     mHappyPlaceDetails=intent.getParcelableExtra(MainActivity.EXTRA_PLACE_DETAILS) as HapyPlaceModal?
@@ -94,7 +105,7 @@ if (intent.hasExtra(MainActivity.EXTRA_PLACE_DETAILS))
         binding?.etDate?.setOnClickListener (this)
         binding?.tvAddImage?.setOnClickListener(this)
         binding?.btnSave?.setOnClickListener(this)
-
+        binding?.etLocation?.setOnClickListener(this)
     }
 
     override fun onClick(v: View?) {
@@ -202,6 +213,26 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
 
 
           }
+          R.id.et_location->
+          {
+              try {
+                  val fields  = listOf(
+                      Place. Field. ID, Place. Field. NAME, Place. Field. LAT_LNG,
+                      Place. Field. ADDRESS
+                  )
+                  // Start the autocomplete intent with a unique request code.
+                  val intent =
+                      Autocomplete. IntentBuilder(AutocompleteActivityMode. FULLSCREEN, fields)
+                          .build(this@AddHapyPlacesActivity)
+                  startActivityForResult(intent, PLACE_AUTOCOMPLETE_REQUEST_CODE)
+
+
+              }catch (e:java.lang.Exception)
+              {
+                  e.printStackTrace()
+              }
+          }
+
       }
 
 
@@ -240,7 +271,16 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
             }
         } else if (resultCode == Activity.RESULT_CANCELED) {
             Log.e("Cancelled", "Cancelled")
+        } else if(resultCode==PLACE_AUTOCOMPLETE_REQUEST_CODE)
+        {
+            val place :Place=Autocomplete.getPlaceFromIntent(data!!)
+            binding!!.etLocation.setText(place.address)
+            mLatitude=place.latLng!!.latitude
+            mLongitude=place.latLng!!.longitude
+
         }
+
+
     }
     private fun takePhotoFromCamera() {
 
@@ -390,6 +430,7 @@ Dexter.withActivity(this).withPermissions(
        private const val IMAGE_DIRECTORY = "HappyPlacesImages"
        private  const val GALLERY=1
        private  const val CAMERA=2
+       private const val PLACE_AUTOCOMPLETE_REQUEST_CODE=3
    }
 
 }
