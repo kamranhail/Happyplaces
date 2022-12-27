@@ -31,11 +31,23 @@
                 android:value="" />
         </activity>
         <activity
-          android:exported="false"
             android:name=".activities.AddHapyPlacesActivity"
+
             android:label="ADD HAPPY PLACE"
-            android:screenOrientation="portrait"
+
             android:theme="@style/CustomNoActionBarTheme" />
+
+
+        <activity
+            android:name=".activities.HappyPlaceDetailActivity"
+
+            android:theme="@style/CustomNoActionBarTheme"
+
+            >
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
     </application>
 
 </manifest>

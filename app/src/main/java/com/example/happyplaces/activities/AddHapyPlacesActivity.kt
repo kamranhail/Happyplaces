@@ -48,6 +48,7 @@ class AddHapyPlacesActivity : AppCompatActivity(), View.OnClickListener
 
     private var mLatitude: Double = 0.0
     private var mLongitude: Double = 0.0
+    private var mHappyPlaceDetails:HapyPlaceModal?=null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding= ActivityAddHapyPlacesBinding.inflate(layoutInflater)
@@ -60,6 +61,11 @@ class AddHapyPlacesActivity : AppCompatActivity(), View.OnClickListener
             onBackPressed()
 
         }
+if (intent.hasExtra(MainActivity.EXTRA_PLACE_DETAILS))
+{
+    mHappyPlaceDetails=intent.getParcelableExtra(MainActivity.EXTRA_PLACE_DETAILS) as HapyPlaceModal?
+
+}
 
         dateSetListener=DatePickerDialog.OnDateSetListener{
             view, year, month, dayOfMonth ->
@@ -67,6 +73,23 @@ class AddHapyPlacesActivity : AppCompatActivity(), View.OnClickListener
             cal.set(Calendar.MONTH,month)
             cal.set(Calendar.DAY_OF_MONTH,dayOfMonth)
             updateDateInView()
+ }
+
+        if (mHappyPlaceDetails != null) {
+            supportActionBar?.title = "Edit Happy Place"
+
+            et_title.setText(mHappyPlaceDetails!!.title)
+            et_description.setText(mHappyPlaceDetails!!.description)
+            et_date.setText(mHappyPlaceDetails!!.data)
+            et_location.setText(mHappyPlaceDetails!!.location)
+            mLatitude = mHappyPlaceDetails!!.latitdue
+            mLongitude = mHappyPlaceDetails!!.longitude
+
+            saveImageToInternalStorage = Uri.parse(mHappyPlaceDetails!!.image)
+
+            iv_place_image.setImageURI(saveImageToInternalStorage)
+
+            btn_save.text = "UPDATE"
         }
         binding?.etDate?.setOnClickListener (this)
         binding?.tvAddImage?.setOnClickListener(this)
@@ -129,8 +152,9 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
                   else -> {
 
                       // Assigning all the values to data model class.
+                      // use id to update updatedate happyplace details
                       val happyPlaceModel = HapyPlaceModal(
-                          0,
+                          if(mHappyPlaceDetails==null) 0 else mHappyPlaceDetails!!.id,
                           et_title.text.toString(),
                           saveImageToInternalStorage.toString(),
                           et_description.text.toString(),
@@ -143,18 +167,36 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
                       // Here we initialize the database handler class.
                       val dbHandler = DatabaseHelper(this)
 
-                      val addHappyPlace = dbHandler.addHappyPlace(happyPlaceModel)
+                      if(mHappyPlaceDetails==null){
+                          val addHappyPlace = dbHandler.addHappyPlace(happyPlaceModel)
 
-                      if (addHappyPlace > 0) {
-                          Toast.makeText(
-                              this,
-                              "The happy place details are inserted successfully.",
-                              Toast.LENGTH_SHORT
-                          ).show()
-                          // first start activity for result then set result
-                          setResult(Activity.RESULT_OK)
-                          finish();//finishing activity
+                          if (addHappyPlace > 0) {
+                              Toast.makeText(
+                                  this,
+                                  "The happy place details are inserted successfully.",
+                                  Toast.LENGTH_SHORT
+                              ).show()
+                              // first start activity for result then set result
+                              setResult(Activity.RESULT_OK)
+                              finish();//finishing activity
+                          }
                       }
+                      else
+                      {
+                          val updateplace = dbHandler.updateHappyPlace(happyPlaceModel)
+
+                          if (updateplace > 0) {
+                              Toast.makeText(
+                                  this,
+                                  "The happy place details are inserted successfully.",
+                                  Toast.LENGTH_SHORT
+                              ).show()
+                              // first start activity for result then set result
+                              setResult(Activity.RESULT_OK)
+                              finish();//finishing activity
+                          }
+                      }
+
                   }
           }
 
