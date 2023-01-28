@@ -67,7 +67,7 @@ class AddHapyPlacesActivity : AppCompatActivity(), View.OnClickListener
 
         }
 
-        if(Places.isInitialized())
+        if(!Places.isInitialized())
         {
             Places.initialize(this@AddHapyPlacesActivity,
                 resources.getString(R.string.google_mas_api_key))
