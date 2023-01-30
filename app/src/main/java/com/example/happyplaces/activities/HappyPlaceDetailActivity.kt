@@ -1,5 +1,6 @@
 package com.example.happyplaces.activities
 
+import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -35,6 +36,13 @@ setSupportActionBar(toolbar_happy_place_detail)
             binding!!. ivPlaceImage.setImageURI(Uri.parse(happyPlaceDetailModal.image))
             binding!!.tvDescription.text = happyPlaceDetailModal.description
             binding!!.tvLocation.text = happyPlaceDetailModal.location
+        }
+
+
+        btn_view_on_map.setOnClickListener {
+            val intent = Intent(this@HappyPlaceDetailActivity, MapActivity::class.java)
+            intent.putExtra(MainActivity.EXTRA_PLACE_DETAILS, happyPlaceDetailModal)
+            startActivity(intent)
         }
 
     }

@@ -1,6 +1,7 @@
 package com.example.happyplaces.activities
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.app.DatePickerDialog
@@ -9,10 +10,13 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.graphics.Bitmap
+import android.location.Location
+import android.location.LocationManager
 import android.net.Uri
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.os.Looper
 import android.provider.MediaStore
 import android.provider.Settings
 import android.util.Log
@@ -23,6 +27,8 @@ import com.example.happyplaces.activities.AddHapyPlacesActivity.Companion.PLACE_
 import com.example.happyplaces.database.DatabaseHelper
 import com.example.happyplaces.databinding.ActivityAddHapyPlacesBinding
 import com.example.happyplaces.modals.HapyPlaceModal
+import com.example.happyplaces.utils.GetAddressFromLatLng
+import com.google.android.gms.location.*
 import com.google.android.libraries.places.api.Places
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.widget.Autocomplete
@@ -54,13 +60,15 @@ class AddHapyPlacesActivity : AppCompatActivity(), View.OnClickListener
     private var mLatitude: Double = 0.0
     private var mLongitude: Double = 0.0
     private var mHappyPlaceDetails:HapyPlaceModal?=null
+
+    private lateinit var mFusedLocationClient: FusedLocationProviderClient
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding= ActivityAddHapyPlacesBinding.inflate(layoutInflater)
         setContentView(binding?.root)
         setSupportActionBar(binding?.tbAddplaces)
 
-
+mFusedLocationClient=LocationServices.getFusedLocationProviderClient(this)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding?.tbAddplaces?.setNavigationOnClickListener{
             onBackPressed()
@@ -106,8 +114,20 @@ if (intent.hasExtra(MainActivity.EXTRA_PLACE_DETAILS))
         binding?.tvAddImage?.setOnClickListener(this)
         binding?.btnSave?.setOnClickListener(this)
         binding?.etLocation?.setOnClickListener(this)
+        binding?.tvSelectCurrentLocation?.setOnClickListener(this)
     }
 
+
+    /**
+     * A function which is used to verify that the location or let's GPS is enable or not of the user's device.
+     */
+    private fun isLocationEnabled(): Boolean {
+        val locationManager: LocationManager =
+            getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(
+            LocationManager.NETWORK_PROVIDER
+        )
+    }
     override fun onClick(v: View?) {
     //    Toast.makeText(this,"$v.id",Toast.LENGTH_LONG).show()
       when(v!!.id)
@@ -217,8 +237,8 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
           {
               try {
                   val fields  = listOf(
-                      Place. Field. ID, Place. Field. NAME, Place. Field. LAT_LNG,
-                      Place. Field. ADDRESS
+                      Place. Field.ID, Place.Field.NAME, Place.Field.LAT_LNG,
+                      Place. Field.ADDRESS
                   )
                   // Start the autocomplete intent with a unique request code.
                   val intent =
@@ -232,6 +252,44 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
                   e.printStackTrace()
               }
           }
+          R.id.tv_select_current_location->
+          {
+              if (!isLocationEnabled()) {
+                  Toast.makeText(
+                      this,
+                      "Your location provider is turned off. Please turn it on.",
+                      Toast.LENGTH_SHORT
+                  ).show()
+
+                  // This will redirect you to settings from where you need to turn on the location provider.
+                  val intent = Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                  startActivity(intent)
+              } else {
+
+                  Dexter.withActivity(this)
+                      .withPermissions(
+                          Manifest.permission.ACCESS_FINE_LOCATION,
+                          Manifest.permission.ACCESS_COARSE_LOCATION
+                      )
+                      .withListener(object : MultiplePermissionsListener {
+                          override fun onPermissionsChecked(report: MultiplePermissionsReport?) {
+                              if (report!!.areAllPermissionsGranted()) {
+
+                                  requestNewLocationData()
+                              }
+                          }
+
+                          override fun onPermissionRationaleShouldBeShown(
+                              permissions: MutableList<PermissionRequest>?,
+                              token: PermissionToken?
+                          ) {
+                              showRationalDialogForPermissions()
+                          }
+                      }).onSameThread()
+                      .check()
+              }
+
+          }
 
       }
 
@@ -241,6 +299,8 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (resultCode == Activity.RESULT_OK) {
+            Log.e("kami", " places $requestCode")
+
             if (requestCode == GALLERY) {
                 if (data != null) {
                     val contentURI = data.data
@@ -256,7 +316,8 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
                         iv_place_image!!.setImageBitmap(selectedImageBitmap) // Set the selected image from GALLERY to imageView.
                     } catch (e: IOException) {
                         e.printStackTrace()
-                        Toast.makeText(this@AddHapyPlacesActivity, "Failed!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this@AddHapyPlacesActivity, "Failed!", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 }
 
@@ -266,21 +327,20 @@ picturedialog.setItems(pictureDialogItems) { dialog, which ->
                 saveImageToInternalStorage =
                     saveImageToInternalStorage(thumbnail)
                 Log.e("Saved Image : ", "Path :: $saveImageToInternalStorage")
+             iv_place_image!!.setImageBitmap(thumbnail) // Set to the imageView.
+            } else if (requestCode == PLACE_AUTOCOMPLETE_REQUEST_CODE) {
 
-                iv_place_image!!.setImageBitmap(thumbnail) // Set to the imageView.
+                val place: Place = Autocomplete.getPlaceFromIntent(data!!)
+                Log.e("result", " places  $place")
+               et_location.setText(place.address)
+                mLatitude = place.latLng!!.latitude
+                mLongitude = place.latLng!!.longitude
+
+            }else if (resultCode == Activity.RESULT_CANCELED) {
+                Log.e("Cancelled", "Cancelled")
             }
-        } else if (resultCode == Activity.RESULT_CANCELED) {
-            Log.e("Cancelled", "Cancelled")
-        } else if(resultCode==PLACE_AUTOCOMPLETE_REQUEST_CODE)
-        {
-            val place :Place=Autocomplete.getPlaceFromIntent(data!!)
-            binding!!.etLocation.setText(place.address)
-            mLatitude=place.latLng!!.latitude
-            mLongitude=place.latLng!!.longitude
 
         }
-
-
     }
     private fun takePhotoFromCamera() {
 
@@ -418,6 +478,10 @@ Dexter.withActivity(this).withPermissions(
         return Uri.parse(file.absolutePath)
     }
 
+
+
+
+
     private fun updateDateInView()
     {
 
@@ -426,11 +490,62 @@ Dexter.withActivity(this).withPermissions(
         binding?.etDate?.setText(sdf.format(cal.time).toString())
     }
 
+    /**
+     * A function to request the current location. Using the fused location provider client.
+     */
+    @SuppressLint("MissingPermission")
+    private fun requestNewLocationData() {
+
+        val mLocationRequest = LocationRequest()
+        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        mLocationRequest.interval = 0
+        mLocationRequest.fastestInterval = 0
+        mLocationRequest.numUpdates = 1
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        mFusedLocationClient.requestLocationUpdates(
+            mLocationRequest, mLocationCallback,
+            Looper.myLooper()
+        )
+    }
+
+    /**
+     * A location callback object of fused location provider client where we will get the current location details.
+     */
+    private val mLocationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            val mLastLocation: Location = locationResult.lastLocation!!
+            mLatitude = mLastLocation.latitude
+            Log.e("Current Latitude", "$mLatitude")
+            mLongitude = mLastLocation.longitude
+            Log.e("Current Longitude", "$mLongitude")
+
+
+            val addressTask =
+                GetAddressFromLatLng(this@AddHapyPlacesActivity, mLatitude, mLongitude)
+
+            addressTask.setAddressListener(object :
+                GetAddressFromLatLng.AddressListener {
+                override fun onAddressFound(address: String?) {
+                    Log.e("Address ::", "" + address)
+                    et_location.setText(address) // Address is set to the edittext
+                }
+
+                override fun onError() {
+                    Log.e("Get Address ::", "Something is wrong...")
+                }
+            })
+
+            addressTask.getAddress()
+            // END
+        }
+    }
+
    companion object{
        private const val IMAGE_DIRECTORY = "HappyPlacesImages"
-       private  const val GALLERY=1
-       private  const val CAMERA=2
-       private const val PLACE_AUTOCOMPLETE_REQUEST_CODE=3
+       private  const val GALLERY= 1
+       private  const val CAMERA= 2
+       private const val PLACE_AUTOCOMPLETE_REQUEST_CODE= 3
    }
 
 }
